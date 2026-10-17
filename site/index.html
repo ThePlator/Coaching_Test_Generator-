@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prashn Patra · Coaching Test Generator</title>
+<meta name="description" content="Turn a chapter into a printable practice test in Hindi, English or both — with an answer key that shows the source line. Runs offline on your own laptop with Gemma.">
+<meta property="og:title" content="Prashn Patra · प्रश्न पत्र">
+<meta property="og:description" content="Chapter in. Printed test out. Hindi, English or bilingual — offline, private, open source.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='10' y='6' width='44' height='52' rx='4' fill='%23fdfaf3' stroke='%231d2b4f' stroke-width='4'/><path d='M20 22h24M20 32h24M20 42h14' stroke='%23c2412d' stroke-width='4' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Noto+Sans:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600;700&family=Tiro+Devanagari+Hindi&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #fbf7ee;
+    --paper-2: #f3ecdc;
+    --card: #fffdf8;
+    --ink: #1d2b4f;
+    --ink-soft: #4a5577;
+    --rule: #c9d6ea;
+    --margin: #c2412d;
+    --ok: #2f7d4f;
+    --shadow: 0 1px 0 rgba(29,43,79,.06), 0 12px 32px -12px rgba(29,43,79,.25);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12172a; --paper-2: #182038; --card: #1c2440; --ink: #eef1fb; --ink-soft: #aab3cf;
+      --rule: #2b3658; --margin: #ef7a63; --ok: #6cc595; --shadow: 0 12px 32px -12px rgba(0,0,0,.6);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.6 "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
+  }
+  .hi { font-family: "Noto Sans Devanagari", "Noto Sans", sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  h1, h2, h3 { font-family: Fraunces, Georgia, serif; line-height: 1.15; margin: 0; }
+
+  /* nav */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+  .brand { font-weight: 600; text-decoration: none; display: flex; gap: 10px; align-items: baseline; }
+  .brand .deva { font-family: "Tiro Devanagari Hindi", serif; font-size: 1.35rem; }
+  nav .links a { margin-left: 18px; text-decoration: none; color: var(--ink-soft); font-size: .95rem; }
+  nav .links a:hover { color: var(--ink); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; padding: 40px 0 72px; }
+  .eyebrow { display: inline-block; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--margin); font-weight: 600; margin-bottom: 14px; }
+  .hero h1 { font-size: clamp(2.3rem, 5.5vw, 3.8rem); font-weight: 800; letter-spacing: -.01em; }
+  .hero h1 em { font-style: normal; color: var(--margin); }
+  .hero .deva-line { font-family: "Tiro Devanagari Hindi", serif; font-size: 1.35rem; color: var(--ink-soft); margin: 12px 0 0; }
+  .hero p.lead { font-size: 1.12rem; color: var(--ink-soft); max-width: 34em; margin: 18px 0 28px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 2px solid var(--ink); }
+  .btn.primary { background: var(--ink); color: var(--paper); }
+  .btn:hover { transform: translateY(-1px); }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 22px; font-size: .9rem; color: var(--ink-soft); }
+  .facts span::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+
+  /* paper mock */
+  .sheet {
+    position: relative; background: var(--card); border-radius: 6px; box-shadow: var(--shadow);
+    padding: 22px 22px 18px 54px; transform: rotate(1.2deg);
+    background-image: repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px);
+    background-position: 0 62px;
+  }
+  .sheet::before { content: ""; position: absolute; top: 0; bottom: 0; left: 38px; width: 2px; background: var(--margin); opacity: .7; }
+  .sheet header { text-align: center; border-bottom: 2px solid var(--ink); padding-bottom: 6px; margin-bottom: 10px; background: var(--card); }
+  .sheet header b { display: block; font-size: 1.05rem; }
+  .sheet header small { color: var(--ink-soft); }
+  .q { line-height: 32px; }
+  .q .n { font-weight: 700; margin-right: 6px; }
+  .opts { display: grid; grid-template-columns: 1fr; font-size: .95rem; padding-left: 18px; }
+  .opts .right { color: var(--ok); font-weight: 600; }
+  .source { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--ok); background: var(--paper-2); font-size: .85rem; line-height: 1.45; font-style: italic; border-radius: 0 6px 6px 0; }
+  .source b { font-style: normal; color: var(--ok); }
+
+  /* sections */
+  section { padding: 64px 0; }
+  section.alt { background: var(--paper-2); }
+  .section-head { max-width: 40em; margin-bottom: 32px; }
+  .section-head h2 { font-size: clamp(1.7rem, 3.5vw, 2.4rem); }
+  .section-head p { color: var(--ink-soft); margin: 10px 0 0; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: step; }
+  .step { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+  .step::before { counter-increment: step; content: counter(step); display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--paper); font-weight: 700; margin-bottom: 10px; }
+  .step h3 { font-size: 1.1rem; margin-bottom: 6px; }
+  .step p { margin: 0; color: var(--ink-soft); font-size: .95rem; }
+  .why { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 36px; }
+  .why div { border-top: 2px solid var(--ink); padding-top: 12px; }
+  .why h3 { font-size: 1.15rem; margin-bottom: 4px; }
+  .why p { margin: 0; color: var(--ink-soft); }
+  .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .plan { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .plan.feature { outline: 2px solid var(--margin); }
+  .plan h3 { font-size: 1.05rem; }
+  .plan .price { font-family: Fraunces, Georgia, serif; font-size: 1.9rem; font-weight: 800; margin: 8px 0 2px; }
+  .plan .per { color: var(--ink-soft); font-size: .85rem; }
+  .plan p { color: var(--ink-soft); font-size: .92rem; margin: 10px 0 0; }
+  .note { font-size: .85rem; color: var(--ink-soft); margin-top: 16px; }
+  .video { aspect-ratio: 16/9; border-radius: 12px; background: var(--card); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--ink-soft); overflow: hidden; }
+  .video iframe { width: 100%; height: 100%; border: 0; }
+  footer { padding: 32px 0 48px; color: var(--ink-soft); font-size: .9rem; border-top: 1px solid var(--rule); }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 16px; }
+    .sheet { transform: none; }
+    .steps, .plans { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 520px) {
+    nav .links a:not(.gh) { display: none; }
+    .steps, .plans, .why { grid-template-columns: 1fr; }
+    .opts { grid-template-columns: 1fr; }
+    .sheet { padding-left: 46px; }
+    .sheet::before { left: 32px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn:hover { transform: none; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#"><span class="deva">प्रश्न पत्र</span><span>Prashn Patra</span></a>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a class="gh" href="https://github.com/ThePlator/Coaching_Test_Generator-">GitHub ↗</a>
+      </div>
+    </nav>
+
+    <div class="hero">
+      <div>
+        <span class="eyebrow">For coaching centres &amp; home tutors</span>
+        <h1>Chapter in.<br><em>Printed test</em> out.</h1>
+        <p class="deva-line">अपने अध्याय से मिनटों में हिंदी–अंग्रेज़ी प्रश्न पत्र</p>
+        <p class="lead">Upload a chapter PDF, your notes, or photos of book pages. Get a ready-to-print practice test in Hindi, English or both, with an answer key that points to the exact line in your chapter.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/ThePlator/Coaching_Test_Generator-#quick-start">Get it free</a>
+          <a class="btn" href="#demo">Watch the demo</a>
+        </div>
+        <div class="facts"><span>Runs on your laptop</span><span>Works offline</span><span>Your notes stay private</span><span>Open source (MIT)</span></div>
+      </div>
+
+      <div class="sheet" aria-label="Example bilingual question from a generated paper">
+        <header><b>Sharma Coaching Centre · <span class="hi">शर्मा कोचिंग सेंटर</span></b><small>Polity — Fundamental Rights · Time: 30 min · Marks: 10</small></header>
+        <div class="q"><span class="n">1.</span>Which Article of the Constitution abolishes untouchability?</div>
+        <div class="q hi" style="padding-left:18px">संविधान का कौन-सा अनुच्छेद अस्पृश्यता का अंत करता है?</div>
+        <div class="opts q">
+          <span>(a/क) Article 14 / <span class="hi">अनुच्छेद 14</span></span>
+          <span class="right">(b/ख) Article 17 / <span class="hi">अनुच्छेद 17</span> ✓</span>
+          <span>(c/ग) Article 21 / <span class="hi">अनुच्छेद 21</span></span>
+          <span>(d/घ) Article 32 / <span class="hi">अनुच्छेद 32</span></span>
+        </div>
+        <div class="source"><b>Source line:</b> “Article 17 abolishes untouchability and forbids its practice in any form.”</div>
+      </div>
+    </div>
+  </div>
+
+  <section id="how" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Every question is written from, and checked against, your chapter</h2>
+        <p>A wrong answer key costs a teacher credibility in front of students. So accuracy comes before quantity.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>Add your chapter</h3><p>PDF, pasted notes, or phone photos of the book. Gemma reads the photos.</p></div>
+        <div class="step"><h3>Pick your test</h3><p>5–50 questions: MCQ, true/false, fill in the blank, short answer. Easy to hard. <span class="hi">हिंदी</span>, English or both.</p></div>
+        <div class="step"><h3>Questions are checked</h3><p>Each answer must quote a real line from your chapter. Made-up or repeated questions are dropped.</p></div>
+        <div class="step"><h3>Review, then print</h3><p>Edit, delete or regenerate anything. Then print the student paper and an answer key with source lines.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><h2>Why it costs so little</h2></div>
+      <div class="why">
+        <div><h3>No per-question bill</h3><p>It runs Google's open Gemma model on the laptop you already have. There's no cloud AI to pay for every time you make a test.</p></div>
+        <div><h3>Your notes stay yours</h3><p>Chapters and notes never leave your computer. Nothing is uploaded anywhere.</p></div>
+        <div><h3>Power cut? Bad network?</h3><p>Once it's set up, it works without internet.</p></div>
+        <div><h3>Real exam Hindi</h3><p>Questions are written directly in standard exam Hindi, not word-for-word translation, and print correctly with proper Devanagari fonts.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo" class="alt">
+    <div class="wrap">
+      <div class="section-head"><h2>See it make a test</h2><p>From a chapter to a printed bilingual paper.</p></div>
+      <div class="video">
+        <!-- Replace this paragraph with the embed, e.g.
+        <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID" title="Prashn Patra demo" allowfullscreen></iframe> -->
+        <p>Demo video coming soon</p>
+      </div>
+      <!-- After the first-user session, add a REAL quote (with permission):
+      <blockquote style="margin:28px 0 0;font-size:1.2rem;font-family:Fraunces,serif">“…”<br><small>— Name, role, Patna</small></blockquote> -->
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <div class="section-head"><h2>Simple pricing</h2><p>The software is free and open source. Plans cover setup, support and updates for people who'd rather not do it themselves.</p></div>
+      <div class="plans">
+        <div class="plan"><h3>Free</h3><div class="price">₹0</div><div class="per">3 tests / month</div><p>Try it on your own chapters.</p></div>
+        <div class="plan feature"><h3>Tutor</h3><div class="price">₹199</div><div class="per">per month</div><p>For home tutors teaching a few classes.</p></div>
+        <div class="plan"><h3>Institute</h3><div class="price">₹999</div><div class="per">per month</div><p>Unlimited tests for your coaching centre, set up on your laptop.</p></div>
+        <div class="plan"><h3>Setup</h3><div class="price">₹1,500</div><div class="per">one time</div><p>We install it and train your teachers.</p></div>
+      </div>
+      <p class="note">Early pricing, currently being tested with our first teachers in Patna.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>Prashn Patra · Coaching Test Generator · MIT licence</span>
+      <span>Runs <a href="https://ai.google.dev/gemma">Gemma</a> locally via <a href="https://ollama.com">Ollama</a> · Built for the DEV Hacktoberfest Open-Source AI Challenge</span>
+    </div>
+  </footer>
+</body>
+</html>
