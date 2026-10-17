@@ -1,0 +1,6 @@
+# Copy to config/institute.toml and edit.
+name = "My Coaching Centre"
+name_hi = "मेरा कोचिंग सेंटर"
+default_time_min = 30
+default_marks_per_q = 1.0
+negative_marking = 0.0
