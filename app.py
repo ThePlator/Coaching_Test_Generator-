@@ -17,6 +17,7 @@ from ctg.ingest import IngestError, SourceInput
 from ctg.llm import LLMError, LLMTimeout, LLMUnavailable, ModelMissing, NoVisionModel, OllamaClient
 from ctg.models import QTYPE_LABELS, REASON_LABELS, LocalizedQ, PaperMeta, Question, TestConfig
 from ctg.pipeline import Progress, generate, prepare, regenerate_one
+from ctg.session import SessionLog
 from ctg.validate import check_question
 
 st.set_page_config(page_title="Coaching Test Generator", page_icon="📝", layout="centered")
@@ -58,6 +59,7 @@ def init_state() -> None:
     defaults = {
         "doc": None, "chunks_list": None, "chunks": {}, "test": None, "report": None,
         "pending_cfg": None, "editing": None, "pdfs": None, "health": None, "notice": None,
+        "session": None,
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -67,6 +69,11 @@ def init_state() -> None:
 def md(text: str) -> str:
     """Escape Markdown so question text (e.g. '____') shows as typed."""
     return _MD_SPECIAL.sub(r"\\\1", text)
+
+
+def log() -> SessionLog:
+    """Session log for the first-user numbers; a throwaway one if no chapter was loaded yet."""
+    return st.session_state.session or SessionLog()
 
 
 def friendly(e: Exception) -> str:
@@ -144,6 +151,7 @@ def step_chapter(settings: Settings, llm: OllamaClient) -> None:
             src = SourceInput(kind="text", title=title or "Notes", text=text)
 
     if src is not None:
+        st.session_state.session = SessionLog.start(src.kind)
         bar = st.progress(0.0, text="Reading the chapter…")
 
         def on_progress(p: Progress) -> None:
@@ -158,6 +166,7 @@ def step_chapter(settings: Settings, llm: OllamaClient) -> None:
             bar.empty()
             st.session_state.update(doc=doc, chunks_list=chunks, chunks={c.id: c for c in chunks},
                                     test=None, report=None, editing=None)
+            log().chapter_ready(len(doc.pages), len(doc.ocr_pages), len(chunks))
             invalidate_review()
 
     doc = st.session_state.doc
@@ -210,6 +219,7 @@ def step_settings(settings: Settings, llm: OllamaClient) -> None:
             for q in result.test.questions:
                 q.marks = marks
             st.session_state.update(test=result.test, report=result.report, chunks=result.chunks, editing=None)
+            log().generated(result.report, cfg)
             invalidate_review()
         finally:
             st.session_state.pending_cfg = None
@@ -269,6 +279,8 @@ def edit_form(q: Question, mode: str) -> None:
                                             explanation=v["explanation"].strip()))
             q.answer_index = idx if n_opts else None
             q.source_quote = quote.strip()
+            if q.status == "ok":
+                log().edited += 1
             q.status = "edited"
             # Re-check; failures become warnings only — the teacher has the final say.
             res = check_question(q, st.session_state.chunks[q.chunk_id], st.session_state.test.config,
@@ -308,6 +320,7 @@ def step_review(settings: Settings, llm: OllamaClient) -> None:
                 st.rerun()
             if b2.button("🗑️ Delete", key=f"del_{q.id}", width="stretch"):
                 test.questions = [x for x in test.questions if x.id != q.id]
+                log().deleted += 1
                 invalidate_review()
                 st.rerun()
             if b3.button("🔄 Regenerate", key=f"regen_{q.id}", width="stretch"):
@@ -318,10 +331,12 @@ def step_review(settings: Settings, llm: OllamaClient) -> None:
                         new = None
                         st.session_state.notice = ("error", friendly(e))
                 if new is None:
+                    log().regenerate_failed += 1
                     st.session_state.notice = st.session_state.notice or (
                         "warning", f"Could not write a better question for Q{i}; kept the old one.")
                 else:
                     test.questions = [new if x.id == q.id else x for x in test.questions]
+                    log().regenerated += 1
                     invalidate_review()
                 st.rerun()
 
@@ -361,12 +376,16 @@ def step_export(settings: Settings, profile: InstituteProfile) -> None:
             try:
                 files = {f"{slug}_paper.pdf": render_paper(test, meta),
                          f"{slug}_answer_key.pdf": render_key(test, meta, st.session_state.chunks)}
-                folder = save(settings.outputs_dir, meta, files)
-                st.session_state.pdfs = {"files": files, "folder": str(folder), "mime": "application/pdf"}
+                mime = "application/pdf"
             except ExportError:
                 files = {f"{slug}_paper.html": paper_html(test, meta).encode(),
                          f"{slug}_answer_key.html": key_html(test, meta, st.session_state.chunks).encode()}
-                st.session_state.pdfs = {"files": files, "folder": None, "mime": "text/html"}
+                mime = "text/html"
+            folder = save(settings.outputs_dir, meta, files)
+            st.session_state.pdfs = {"files": files, "folder": str(folder), "mime": mime}
+            if st.session_state.session:
+                st.session_state.session.exported(test.questions)
+                st.session_state.session.save(folder)
 
     pdfs = st.session_state.pdfs
     if pdfs:
@@ -379,6 +398,10 @@ def step_export(settings: Settings, profile: InstituteProfile) -> None:
         for col, (name, data) in zip(cols, pdfs["files"].items()):
             label = "📄 Student paper" if "_paper" in name else "🔑 Answer key"
             col.download_button(label, data, file_name=name, mime=pdfs["mime"], width="stretch")
+        if st.session_state.session:
+            with st.expander("Session numbers (for your first-user notes)"):
+                st.markdown("\n".join(f"- {line}" for line in st.session_state.session.summary_lines()))
+                st.caption(f"Also saved as session.json in `{pdfs['folder']}`. Counts only — no chapter text.")
 
 
 # -- main ------------------------------------------------------------------------------
