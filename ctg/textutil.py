@@ -55,3 +55,69 @@ def quote_score(quote: str, chunk: str) -> int:
 
 def contains_fuzzy(quote: str, chunk: str, threshold: int = 90) -> bool:
     return quote_score(quote, chunk) >= threshold
+
+
+_SENTENCE_END = (".", "?", "!", "।", "॥", ":", ";")
+_NUMBERED_HEADING = re.compile(r"^\d+(\.\d+)*\.?\s+\S")
+SENTENCE_SPLIT = re.compile(r"(?<=[.?!।])\s+")
+
+
+def is_heading(line: str) -> bool:
+    """Short single line with no sentence-ending punctuation, or a numbered heading."""
+    s = line.strip()
+    if not s or "\n" in s or len(s) >= 80 or s.endswith(("-", ",")):
+        return False
+    if _NUMBERED_HEADING.match(s):
+        return True
+    return not s.endswith(_SENTENCE_END) and len(s.split()) <= 10
+
+
+def reflow(text: str) -> str:
+    """Join hard-wrapped lines (as pypdf returns them) into paragraphs separated by blank lines.
+
+    Headings stay on their own paragraph. A line ending a sentence that is clearly
+    shorter than a typical line is treated as the end of a paragraph.
+    """
+    lines = [ln.strip() for ln in text.splitlines()]
+    lengths = sorted(len(ln) for ln in lines if ln)
+    typical = lengths[len(lengths) // 2] if lengths else 0
+
+    paras: list[str] = []
+    cur: list[str] = []
+
+    def flush() -> None:
+        if cur:
+            paras.append(" ".join(cur))
+            cur.clear()
+
+    for ln in lines:
+        if not ln:
+            flush()
+            continue
+        if is_heading(ln) and len(ln) < 0.7 * max(typical, 1):
+            flush()
+            paras.append(ln)
+            continue
+        if cur and cur[-1].endswith("-") and ln[:1].islower():
+            cur[-1] = cur[-1][:-1] + ln          # re-join word hyphenated across lines
+        else:
+            cur.append(ln)
+        if ln.endswith(_SENTENCE_END) and len(ln) < 0.7 * typical:
+            flush()
+    flush()
+    return "\n\n".join(paras)
+
+
+def clean_text(text: str) -> str:
+    """NFC, strip zero-width/BOM, collapse spaces inside lines (keeps line breaks)."""
+    t = unicodedata.normalize("NFC", text).replace("﻿", "").replace("​", "")
+    return "\n".join(re.sub(r"[ \t ]+", " ", ln).strip() for ln in t.splitlines())
+
+
+def garbage_ratio(text: str) -> float:
+    """Share of replacement / private-use glyphs — high for legacy Hindi fonts like Kruti Dev."""
+    chars = [ch for ch in text if not ch.isspace()]
+    if not chars:
+        return 0.0
+    bad = sum(ch == "�" or "" <= ch <= "" for ch in chars)
+    return bad / len(chars)

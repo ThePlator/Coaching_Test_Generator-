@@ -71,7 +71,7 @@ class Settings(BaseSettings):            # pydantic-settings, env prefix CTG_
     overgen_factor: float = 1.3
     max_questions_per_call: int = 5
     quote_match_threshold: int = 90      # rapidfuzz partial_ratio
-    dedupe_threshold: int = 88           # rapidfuzz token_set_ratio
+    dedupe_threshold: int = 90           # rapidfuzz token_sort_ratio
     outputs_dir: Path = Path("outputs")
     bank_path: Path = Path("data/bank.db")
     institute_file: Path = Path("config/institute.toml")
@@ -409,7 +409,7 @@ def dedupe(questions: list[Question], existing: list[Question] = []) -> tuple[li
 
 ### 10.4 Dedupe
 
-The key is `norm(en.stem)`, or `norm(hi.stem)` for Hindi-only mode. Walk the list in order. Drop a question if `fuzz.token_set_ratio(key, kept_key) ≥ 88` for any kept question **or** any question in `existing`. Its drop reason is `duplicate`. Dedupe runs after each chunk (against all questions kept so far) and once more at the end.
+The key is `norm(en.stem)`, or `norm(hi.stem)` for Hindi-only mode. Walk the list in order. Drop a question if `fuzz.token_sort_ratio(key, kept_key) ≥ 90` for any kept question **or** any question in `existing`. Its drop reason is `duplicate`. (`token_set_ratio` was rejected: it scores stems that differ in one key word, e.g. "…Right to Equality?" vs "…Right to Freedom?", as duplicates.) Dedupe runs after each chunk (against all questions kept so far) and once more at the end.
 
 ## 11. Pipeline (`ctg/pipeline.py`)
 
