@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="{{ 'hi' if mode == 'hi' else 'en' }}">
+<head>
+<meta charset="utf-8">
+<title>{{ meta.title }}</title>
+<style>{% include "base.css" %}</style>
+</head>
+<body>
+{% include "_header.html.j2" %}
+
+<section class="instructions">
+  {% if mode != "hi" and meta.instructions_en %}<p>{{ meta.instructions_en }}</p>{% endif %}
+  {% if mode != "en" and meta.instructions_hi %}<p class="hi">{{ meta.instructions_hi }}</p>{% endif %}
+</section>
+
+<ol class="questions">
+{% for q in questions %}
+  <li class="q">
+    <span class="num">{{ q.number }}.</span>
+    <div class="body">
+      {% for loc in q.locs %}
+        <p class="stem {{ loc.lang }}">{{ loc.stem | blank }}</p>
+      {% endfor %}
+
+      {% if q.qtype in ("mcq", "true_false") %}
+        <div class="opts{% if q.wide %} wide{% endif %}">
+          {% for row in q.options %}
+            <div class="opt"><span class="lbl">({{ row.label }})</span>{{ row.text }}</div>
+          {% endfor %}
+        </div>
+      {% elif q.qtype == "short_answer" %}
+        <div class="lines"><div></div><div></div><div></div></div>
+      {% endif %}
+    </div>
+    <span class="marks">[{{ q.marks }}]</span>
+  </li>
+{% endfor %}
+</ol>
+</body>
+</html>

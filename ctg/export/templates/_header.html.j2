@@ -1,0 +1,17 @@
+<header class="paper">
+  <h1>{{ meta.institute }}{% if meta.institute_hi and mode != "en" %} · <span class="hi">{{ meta.institute_hi }}</span>{% endif %}</h1>
+  <div class="title">{{ meta.title }}{% if set_label %}<span class="badge">Set {{ set_label }}</span>{% endif %}</div>
+  <table class="meta">
+    <tr>
+      <td>{{ t("Date", "दिनांक") }}: {{ meta.date.strftime("%d-%m-%Y") }}</td>
+      <td style="text-align:center">{{ t("Time", "समय") }}: {{ meta.time_min }} {{ t("min", "मिनट") }}</td>
+      <td class="r">{{ t("Max. Marks", "पूर्णांक") }}: {{ total_marks }}</td>
+    </tr>
+    {% if show_name_line %}
+    <tr>
+      <td colspan="2">{{ t("Name", "नाम") }}: ______________________________</td>
+      <td class="r">{{ t("Roll No.", "अनुक्रमांक") }}: ____________</td>
+    </tr>
+    {% endif %}
+  </table>
+</header>

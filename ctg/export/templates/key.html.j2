@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="{{ 'hi' if mode == 'hi' else 'en' }}">
+<head>
+<meta charset="utf-8">
+<title>{{ meta.title }} — Answer key</title>
+<style>{% include "base.css" %}</style>
+</head>
+<body>
+{% include "_header.html.j2" %}
+
+<h2 class="key">{{ t("ANSWER KEY", "उत्तर कुंजी") }}{% if set_label %} — Set {{ set_label }}{% endif %}</h2>
+
+<table class="key">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>{{ t("Answer", "उत्तर") }}</th>
+      <th>{{ t("Explanation and source line", "व्याख्या और स्रोत पंक्ति") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for q in questions %}
+    <tr>
+      <td class="n">{{ q.number }}</td>
+      <td class="ans">
+        {% if q.answer_label %}({{ q.answer_label }}) {% endif %}
+        {% for loc in q.locs %}<div class="{{ loc.lang }}">{{ loc.answer_text }}</div>{% endfor %}
+      </td>
+      <td>
+        {% for loc in q.locs %}{% if loc.explanation %}<div class="{{ loc.lang }}">{{ loc.explanation }}</div>{% endif %}{% endfor %}
+        <div class="source">“{{ q.source_quote }}”{% if q.heading %} <span class="h">— {{ q.heading }}</span>{% endif %}</div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</body>
+</html>
