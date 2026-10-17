@@ -47,7 +47,7 @@ coaching-test-generator/
 │   ├── test_pipeline.py
 │   ├── test_shuffle.py
 │   └── test_export.py
-├── scripts/setup.sh, setup.ps1, bench.py
+├── scripts/setup.sh, setup.ps1, preflight.py, cli.py, spike_*.py
 ├── requirements.txt
 ├── LICENSE                     # MIT
 └── README.md
@@ -578,7 +578,7 @@ CREATE INDEX idx_q_chapter ON question(chapter_id, qtype, difficulty);
 | Retry | 0–3 | Only for chunks with failures |
 | Check, dedupe, export | 0 | Under 2 s total |
 
-`scripts/bench.py` runs the sample chapter end to end and prints seconds per call and tokens per second, so the default question count can be set to fit the 5-minute goal on the first user's laptop. If the run is too slow: lower the default to 10 questions, use `text_model` (e.g. `gemma3:1b`) for text-only inputs, and cap `num_predict`.
+`scripts/preflight.py --warm` runs a 5-question bilingual test on the sample chapter and estimates the time for 10 questions (`scripts/spike_gen.py` reports tokens per second), so the default question count can be set to fit the 5-minute goal on the first user's laptop. If the run is too slow: lower the default to 10 questions, use `text_model` (e.g. `gemma3:1b`) for text-only inputs, and cap `num_predict`.
 
 ## 18. Testing
 
